@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arbets tids redovisare</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="container">
+        <h1>
+            <span style="vertical-align:middle;font-size:1.3em;">⏱️</span>
+            Arbets Tids Redovisare
+        </h1>
+        <section class="timer-section card">
+            <button id="startTimerBtn" class="timer-btn">▶️ Starta</button>
+            <button id="stopTimerBtn" class="timer-btn" disabled>⏹️ Stoppa</button>
+            <span id="timerDisplay">00:00:00</span>
+        </section>
+        <form id="workForm" class="work-form card">
+            <input type="date" id="date" required>
+            <input type="number" id="hours" min="0" step="0.1" placeholder="Timmar" required>
+            <input type="text" id="desc" maxlength="100" placeholder="Beskrivning" required>
+            <button type="submit" id="addBtn">Lägg till</button>
+            <button type="button" id="resetBtn">Rensa</button>
+        </form>
+        <div class="actions">
+            <button id="exportBtn" title="Exportera till JSON-fil">⬇️ Exportera</button>
+            <label class="import-label" title="Importera JSON-data">
+                <span>⬆️ Importera</span>
+                <input type="file" id="importInput" accept=".json,application/json,text/json,*/*" hidden>
+            </label>
+            <button id="clearBtn" class="danger" title="Rensa all data">🗑️ Rensa allt</button>
+        </div>
+        <div class="summary card">
+            <span style="font-size:1.1em;">🧮</span>
+            Total arbetad tid: <span id="totalHours">0</span> timmar
+        </div>
+        <div class="table-container card">
+            <table id="workTable">
+                <thead>
+                    <tr>
+                        <th id="sortDate" class="sortable">Datum &#8597;</th>
+                        <th>Timmar</th>
+                        <th>Beskrivning</th>
+                        <th>Åtgärder</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Poster visas här -->
+                </tbody>
+            </table>
+        </div>
+    </main>
+    <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,216 @@
+body {
+    font-family: system-ui, sans-serif;
+    background: linear-gradient(135deg, #e0e7ff 0%, #f6f8fa 100%);
+    margin: 0;
+    padding: 0;
+}
+.container {
+    max-width: 600px;
+    margin: 2rem auto;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 24px #0002;
+    border: 1px solid #e0e7ef;
+    padding: 2rem 1rem;
+}
+.card {
+    background: #f8fafc;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px #0001;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+h1 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+.work-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+    justify-content: center;
+    background: linear-gradient(90deg, #f1f5f9 60%, #e0e7ff 100%);
+    border: 1px solid #e5e7eb;
+    padding: 1rem;
+    border-radius: 6px;
+}
+.work-form input, .work-form button {
+    padding: 0.5rem;
+    font-size: 1rem;
+    border-radius: 4px;
+    border: 1px solid #cbd5e1;
+}
+.work-form input[type="date"] {
+    min-width: 120px;
+}
+.work-form input[type="number"] {
+    width: 80px;
+}
+.work-form input[type="text"] {
+    flex: 1 1 120px;
+}
+.work-form button {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+.work-form button#resetBtn {
+    background: #e5e7eb;
+    color: #111;
+    border: 1px solid #cbd5e1;
+}
+.actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    margin-bottom: 1.2rem;
+    flex-wrap: wrap;
+}
+.actions button, .import-label {
+    padding: 0.5rem 1rem;
+    background: #e0e7ef;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #111;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+.actions button:hover, .import-label:hover {
+    background: #dbeafe;
+}
+.actions .danger {
+    background: #ef4444;
+    color: #fff;
+    border: 1px solid #ef4444;
+}
+.import-label {
+    display: inline-block;
+    cursor: pointer;
+    background: #e0e7ef;
+    color: #111;
+    border: 1px solid #cbd5e1;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    font-weight: 500;
+}
+.summary {
+    text-align: right;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    background: #f1f5f9;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 0.7rem 1rem;
+}
+.table-container {
+    overflow-x: auto;
+}
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 6px;
+    overflow: hidden;
+}
+th, td {
+    padding: 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 1em;
+}
+th {
+    background: #e0e7ef;
+    font-weight: 600;
+}
+th.sortable:hover {
+    background: #dbeafe;
+}
+tr:last-child td {
+    border-bottom: none;
+}
+.action-btn {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    padding: 0.3rem 0.7rem;
+    margin-right: 0.3rem;
+    cursor: pointer;
+    font-size: 0.95em;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+.action-btn.edit {
+    background: #38bdf8;
+}
+.action-btn.edit:hover {
+    background: #0ea5e9;
+}
+.action-btn.delete {
+    background: #ef4444;
+}
+.action-btn.delete:hover {
+    background: #b91c1c;
+}
+.timer-section {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    justify-content: center;
+    margin-bottom: 1rem;
+    background: linear-gradient(90deg, #dbeafe 60%, #f1f5f9 100%);
+    border: 1px solid #c7d2fe;
+    font-size: 1.1em;
+}
+.timer-btn {
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 0.5rem 1.1rem;
+    font-size: 1em;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+.timer-btn:disabled {
+    background: #a5b4fc;
+    color: #fff;
+    cursor: not-allowed;
+}
+#timerDisplay {
+    font-family: monospace;
+    font-size: 1.2em;
+    min-width: 90px;
+    color: #1e293b;
+    letter-spacing: 1px;
+}
+@media (max-width: 600px) {
+    .container {
+        padding: 1rem 0.2rem;
+        border: 2px solid #2563eb;
+    }
+    .work-form {
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+    .actions {
+        flex-direction: column;
+        gap: 0.3rem;
+    }
+    .summary {
+        text-align: left;
+    }
+    th, td {
+        font-size: 0.97em;
+    }
+    .card {
+        padding: 0.7rem 0.3rem;
+    }
+}
