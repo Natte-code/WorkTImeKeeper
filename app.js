@@ -2,8 +2,8 @@ const STORAGE_KEY = "worktimekeeper_posts";
 let posts = [];
 let editIndex = null;
 let sortAsc = true;
-let timerStart = null;
-let timerInterval = null;
+let clockInTime = null;
+let clockOutTime = null;
 
 function savePosts() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
@@ -16,9 +16,20 @@ function renderTable() {
     const tbody = document.querySelector("#workTable tbody");
     tbody.innerHTML = "";
     posts.forEach((post, idx) => {
+        // Formatera tider för bättre läsbarhet
+        const formatTime = t => {
+            if (!t) return "";
+            const match = t.match(/^(\d{4}-\d{2}-\d{2})[ ,T]*(\d{2}:\d{2}:\d{2})/);
+            if (match) {
+                return `<span title="${t}">${match[1]}<br>${match[2]}</span>`;
+            }
+            return `<span title="${t}">${t}</span>`;
+        };
+        const clockIn = post.clockIn ? `<br><small><b>Clock In:</b> ${formatTime(post.clockIn)}</small>` : "";
+        const clockOut = post.clockOut ? `<br><small><b>Clock Out:</b> ${formatTime(post.clockOut)}</small>` : "";
         const tr = document.createElement("tr");
         tr.innerHTML = `
-            <td>${post.date}</td>
+            <td>${post.date}${clockIn}${clockOut}</td>
             <td>${post.hours}</td>
             <td>${post.desc}</td>
             <td>
@@ -34,17 +45,31 @@ function resetForm() {
     document.getElementById("workForm").reset();
     editIndex = null;
     document.getElementById("addBtn").textContent = "Lägg till";
+    clockInTime = null;
+    clockOutTime = null;
+    document.getElementById("clockInTime").textContent = "";
+    document.getElementById("clockOutTime").textContent = "";
+    document.getElementById("clockInBtn").disabled = false;
+    document.getElementById("clockOutBtn").disabled = true;
 }
 function addOrEditPost(e) {
     e.preventDefault();
     const date = document.getElementById("date").value;
     const hours = parseFloat(document.getElementById("hours").value);
     const desc = document.getElementById("desc").value.trim();
+    // clockInTime och clockOutTime kan vara null
     if (!date || isNaN(hours) || !desc) return;
+    const postData = {
+        date,
+        hours,
+        desc,
+        clockIn: clockInTime,
+        clockOut: clockOutTime
+    };
     if (editIndex !== null) {
-        posts[editIndex] = { date, hours, desc };
+        posts[editIndex] = postData;
     } else {
-        posts.push({ date, hours, desc });
+        posts.push(postData);
     }
     sortPosts();
     savePosts();
@@ -59,6 +84,12 @@ function handleTableClick(e) {
         document.getElementById("hours").value = post.hours;
         document.getElementById("desc").value = post.desc;
         document.getElementById("addBtn").textContent = "Spara";
+        clockInTime = post.clockIn || null;
+        clockOutTime = post.clockOut || null;
+        document.getElementById("clockInTime").textContent = clockInTime ? `⏱️ ${clockInTime.split(" ")[1]}` : "";
+        document.getElementById("clockOutTime").textContent = clockOutTime ? `⏱️ ${clockOutTime.split(" ")[1]}` : "";
+        document.getElementById("clockInBtn").disabled = !!clockInTime;
+        document.getElementById("clockOutBtn").disabled = !clockInTime || !!clockOutTime;
     } else if (e.target.classList.contains("delete")) {
         const idx = Number(e.target.dataset.idx);
         if (confirm("Ta bort posten?")) {
@@ -113,7 +144,9 @@ function importJSON(e) {
             posts = arr.map(p => ({
                 date: p.date,
                 hours: Number(p.hours),
-                desc: p.desc
+                desc: p.desc,
+                clockIn: p.clockIn || null,
+                clockOut: p.clockOut || null
             }));
 
             sortPosts();
@@ -146,43 +179,40 @@ function toggleSort() {
     sortPosts();
     renderTable();
 }
-function formatTimer(ms) {
-    const totalSec = Math.floor(ms / 1000);
-    const h = String(Math.floor(totalSec / 3600)).padStart(2, "0");
-    const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, "0");
-    const s = String(totalSec % 60).padStart(2, "0");
-    return `${h}:${m}:${s}`;
+function getCurrentTimestamp() {
+    const now = new Date();
+    // Format: YYYY-MM-DD HH:mm:ss
+    const pad = n => String(n).padStart(2, "0");
+    const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const time = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    return `${date} ${time}`;
 }
-function updateTimerDisplay() {
-    const display = document.getElementById("timerDisplay");
-    if (timerStart) {
-        const elapsed = Date.now() - timerStart;
-        display.textContent = formatTimer(elapsed);
-    } else {
-        display.textContent = "00:00:00";
+function clockIn() {
+    if (clockInTime) return;
+    clockInTime = getCurrentTimestamp();
+    document.getElementById("clockInTime").textContent = `⏱️ ${clockInTime.split(" ")[1]}`;
+    document.getElementById("clockInBtn").disabled = true;
+    document.getElementById("clockOutBtn").disabled = false;
+    // Sätt dagens datum om det inte är valt
+    if (!document.getElementById("date").value) {
+        document.getElementById("date").value = clockInTime.split(" ")[0];
     }
 }
-function startTimer() {
-    if (timerStart) return;
-    timerStart = Date.now();
-    document.getElementById("startTimerBtn").disabled = true;
-    document.getElementById("stopTimerBtn").disabled = false;
-    timerInterval = setInterval(updateTimerDisplay, 500);
-    updateTimerDisplay();
-}
-function stopTimer() {
-    if (!timerStart) return;
-    clearInterval(timerInterval);
-    const elapsedMs = Date.now() - timerStart;
-    const hours = +(elapsedMs / 3600000).toFixed(2);
-    // Fyll i formuläret automatiskt
-    document.getElementById("date").value = new Date().toISOString().slice(0,10);
-    document.getElementById("hours").value = hours;
-    document.getElementById("desc").focus();
-    timerStart = null;
-    updateTimerDisplay();
-    document.getElementById("startTimerBtn").disabled = false;
-    document.getElementById("stopTimerBtn").disabled = true;
+function clockOut() {
+    if (!clockInTime || clockOutTime) return;
+    clockOutTime = getCurrentTimestamp();
+    document.getElementById("clockOutTime").textContent = `⏱️ ${clockOutTime.split(" ")[1]}`;
+    document.getElementById("clockOutBtn").disabled = true;
+    // Räkna ut timmar automatiskt om clockIn och clockOut är samma dag
+    const dateVal = document.getElementById("date").value;
+    if (dateVal && clockInTime && clockOutTime) {
+        const inDate = new Date(`${dateVal}T${clockInTime.split(" ")[1]}`);
+        const outDate = new Date(`${dateVal}T${clockOutTime.split(" ")[1]}`);
+        let diff = (outDate - inDate) / 3600000;
+        if (!isNaN(diff) && diff > 0) {
+            document.getElementById("hours").value = diff.toFixed(2);
+        }
+    }
 }
 
 document.getElementById("workForm").addEventListener("submit", addOrEditPost);
@@ -192,8 +222,10 @@ document.getElementById("exportBtn").addEventListener("click", exportJSON);
 document.getElementById("importInput").addEventListener("change", importJSON);
 document.getElementById("clearBtn").addEventListener("click", clearAll);
 document.getElementById("sortDate").addEventListener("click", toggleSort);
-document.getElementById("startTimerBtn").addEventListener("click", startTimer);
-document.getElementById("stopTimerBtn").addEventListener("click", stopTimer);
+
+// Timer-knappar ersätts med clock in/out
+document.getElementById("clockInBtn").addEventListener("click", clockIn);
+document.getElementById("clockOutBtn").addEventListener("click", clockOut);
 
 loadPosts();
 sortPosts();

@@ -13,9 +13,10 @@
             Arbets Tids Redovisare
         </h1>
         <section class="timer-section card">
-            <button id="startTimerBtn" class="timer-btn">▶️ Starta</button>
-            <button id="stopTimerBtn" class="timer-btn" disabled>⏹️ Stoppa</button>
-            <span id="timerDisplay">00:00:00</span>
+            <button id="clockInBtn" class="timer-btn">🕒 Clock In</button>
+            <span id="clockInTime" class="timestamp"></span>
+            <button id="clockOutBtn" class="timer-btn" disabled>🕔 Clock Out</button>
+            <span id="clockOutTime" class="timestamp"></span>
         </section>
         <form id="workForm" class="work-form card">
             <input type="date" id="date" required>
