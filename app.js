@@ -28,9 +28,12 @@ function renderTable() {
         const clockIn = post.clockIn ? `<br><small><b>Clock In:</b> ${formatTime(post.clockIn)}</small>` : "";
         const clockOut = post.clockOut ? `<br><small><b>Clock Out:</b> ${formatTime(post.clockOut)}</small>` : "";
         const tr = document.createElement("tr");
+        // Visa alltid två decimaler, utan avrundning till en decimal
+        let hoursStr = typeof post.hours === "number" ? post.hours.toFixed(2) : Number(post.hours).toFixed(2);
+        hoursStr = hoursStr.replace(".", ",");
         tr.innerHTML = `
             <td>${post.date}${clockIn}${clockOut}</td>
-            <td>${post.hours}</td>
+            <td>${hoursStr}</td>
             <td>${post.desc}</td>
             <td>
                 <button class="action-btn edit" data-idx="${idx}">Redigera</button>
@@ -39,7 +42,9 @@ function renderTable() {
         `;
         tbody.appendChild(tr);
     });
-    document.getElementById("totalHours").textContent = posts.reduce((sum, p) => sum + Number(p.hours), 0);
+    // Summering med komma och två decimaler
+    const total = posts.reduce((sum, p) => sum + Number(p.hours), 0);
+    document.getElementById("totalHours").textContent = total.toFixed(2).replace(".", ",");
 }
 function resetForm() {
     document.getElementById("workForm").reset();
@@ -55,13 +60,16 @@ function resetForm() {
 function addOrEditPost(e) {
     e.preventDefault();
     const date = document.getElementById("date").value;
-    const hours = parseFloat(document.getElementById("hours").value);
+    // Tillåt punkt eller komma som decimaltecken och konvertera till nummer
+    let hoursStr = document.getElementById("hours").value.replace(",", ".");
+    const hours = Number(hoursStr);
     const desc = document.getElementById("desc").value.trim();
     // clockInTime och clockOutTime kan vara null
     if (!date || isNaN(hours) || !desc) return;
+    // Spara alltid två decimaler
     const postData = {
         date,
-        hours,
+        hours: Number(hours.toFixed(2)),
         desc,
         clockIn: clockInTime,
         clockOut: clockOutTime

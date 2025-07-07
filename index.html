@@ -20,7 +20,7 @@
         </section>
         <form id="workForm" class="work-form card">
             <input type="date" id="date" required>
-            <input type="number" id="hours" min="0" step="0.1" placeholder="Timmar" required>
+            <input type="number" id="hours" min="0" step="0.01" placeholder="Timmar" required>
             <input type="text" id="desc" maxlength="100" placeholder="Beskrivning" required>
             <button type="submit" id="addBtn">Lägg till</button>
             <button type="button" id="resetBtn">Rensa</button>
@@ -34,7 +34,7 @@
             <button id="clearBtn" class="danger" title="Rensa all data">🗑️ Rensa allt</button>
         </div>
         <div class="summary card">
-            <span style="font-size:1.1em;">🧮</span>
+            <span style="font-size:1.1em;"></span>
             Total arbetad tid: <span id="totalHours">0</span> timmar
         </div>
         <div class="table-container card">
