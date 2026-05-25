@@ -5,13 +5,26 @@ body {
     padding: 0;
 }
 .container {
-    max-width: 600px;
+    max-width: 1100px;
     margin: 2rem auto;
     background: #fff;
     border-radius: 8px;
     box-shadow: 0 4px 24px #0002;
     border: 1px solid #e0e7ef;
     padding: 2rem 1rem;
+}
+.page-layout {
+    display: flex;
+    gap: 1rem;
+    align-items: start;
+}
+.sidebar {
+    flex: 0 0 320px;
+    width: 320px;
+}
+.main-content {
+    flex: 1 1 auto;
+    min-width: 0;
 }
 .card {
     background: #f8fafc;
@@ -109,6 +122,89 @@ h1 {
     border-radius: 6px;
     padding: 0.7rem 1rem;
 }
+.income-section {
+    background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 55%, #ecfeff 100%);
+    border: 1px solid #c7d2fe;
+    position: sticky;
+    top: 1rem;
+    margin-bottom: 0;
+    width: auto;
+}
+.income-header {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.income-header h2 {
+    margin: 0 0 0.25rem;
+    font-size: 1.2rem;
+}
+.income-note {
+    margin: 0;
+    color: #475569;
+    font-size: 0.95rem;
+    line-height: 1.4;
+}
+.income-settings {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+}
+.income-settings label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.92rem;
+    color: #334155;
+}
+.income-settings input[type="number"] {
+    min-width: 120px;
+    padding: 0.5rem 0.65rem;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    font-size: 1rem;
+}
+.income-checkbox {
+    flex-direction: row !important;
+    align-items: center;
+    padding-top: 1.7rem;
+    user-select: none;
+}
+.income-checkbox input {
+    width: auto;
+}
+.income-summary-simple {
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 0.9rem;
+}
+.income-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.75);
+    border: 1px solid #dbeafe;
+    border-radius: 10px;
+    padding: 0.75rem 0.9rem;
+}
+.income-line span {
+    color: #64748b;
+    font-size: 0.9rem;
+}
+.income-line strong {
+    font-size: 1.05rem;
+    color: #0f172a;
+}
+.income-line-total {
+    background: #dbeafe;
+}
+.main-content {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+}
 .table-container {
     overflow-x: auto;
 }
@@ -204,6 +300,16 @@ tr:last-child td {
         padding: 1rem 0.2rem;
         border: 2px solid #2563eb;
     }
+    .page-layout {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+    .sidebar {
+        width: auto;
+    }
+    .income-section {
+        position: static;
+    }
     .work-form {
         flex-direction: column;
         gap: 0.3rem;
@@ -220,5 +326,11 @@ tr:last-child td {
     }
     .card {
         padding: 0.7rem 0.3rem;
+    }
+    .income-settings {
+        justify-content: flex-start;
+    }
+    .income-checkbox {
+        padding-top: 0.25rem;
     }
 }

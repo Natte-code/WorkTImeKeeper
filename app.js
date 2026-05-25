@@ -1,9 +1,20 @@
 const STORAGE_KEY = "worktimekeeper_posts";
+const SETTINGS_KEY = "worktimekeeper_settings";
+const DEFAULT_HOURLY_RATE = 130;
+const DEFAULT_VACATION_RATE = 0.12;
+const TAX_THRESHOLD = 25042;
+const TAX_RATE = 0.08;
 let posts = [];
 let editIndex = null;
 let sortAsc = true;
 let clockInTime = null;
 let clockOutTime = null;
+let settings = {
+    hourlyRate: DEFAULT_HOURLY_RATE,
+    vacationRate: DEFAULT_VACATION_RATE,
+    carriedHours: 0,
+    taxEnabled: true
+};
 
 function savePosts() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(posts));
@@ -12,9 +23,101 @@ function loadPosts() {
     const data = localStorage.getItem(STORAGE_KEY);
     posts = data ? JSON.parse(data) : [];
 }
+function saveSettings() {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+function loadSettings() {
+    const data = localStorage.getItem(SETTINGS_KEY);
+    if (!data) return;
+    try {
+        const parsed = JSON.parse(data);
+        settings = {
+            hourlyRate: Number(parsed.hourlyRate) || DEFAULT_HOURLY_RATE,
+            vacationRate: Number(parsed.vacationRate) >= 0 ? Number(parsed.vacationRate) : DEFAULT_VACATION_RATE,
+            carriedHours: Number(parsed.carriedHours) >= 0 ? Number(parsed.carriedHours) : 0,
+            taxEnabled: parsed.taxEnabled !== false
+        };
+    } catch (err) {
+        settings = {
+            hourlyRate: DEFAULT_HOURLY_RATE,
+            vacationRate: DEFAULT_VACATION_RATE,
+            carriedHours: 0,
+            taxEnabled: true
+        };
+    }
+}
+function getCurrentYear() {
+    return new Date().getFullYear();
+}
+function getYearPosts() {
+    const year = getCurrentYear();
+    return posts.filter(post => {
+        const parsedDate = new Date(post.date);
+        return !isNaN(parsedDate) && parsedDate.getFullYear() === year;
+    });
+}
+function formatNumber(value) {
+    return Number(value || 0).toLocaleString("sv-SE", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+function formatMoney(value) {
+    return Number(value || 0).toLocaleString("sv-SE", {
+        style: "currency",
+        currency: "SEK",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+}
+function getIncomeTotals() {
+    const yearPosts = getYearPosts();
+    const loggedHours = yearPosts.reduce((sum, post) => sum + Number(post.hours || 0), 0);
+    const carriedHours = Number(settings.carriedHours) || 0;
+    const yearHours = loggedHours + carriedHours;
+    const baseHourlyRate = Number(settings.hourlyRate) || 0;
+    const vacationRate = Number(settings.vacationRate) || 0;
+    const vacationPay = yearHours * baseHourlyRate * vacationRate;
+    const gross = yearHours * baseHourlyRate + vacationPay;
+    const taxAmount = settings.taxEnabled && gross > TAX_THRESHOLD
+        ? (gross - TAX_THRESHOLD) * TAX_RATE
+        : 0;
+    const net = gross - taxAmount;
+    const grossHourlyRate = baseHourlyRate * (1 + vacationRate);
+    return { yearHours, loggedHours, carriedHours, gross, taxAmount, net, vacationPay, baseHourlyRate, vacationRate, grossHourlyRate };
+}
+function renderIncomeSummary() {
+    const totals = getIncomeTotals();
+    const hourlyRate = Number(settings.hourlyRate) || 0;
+    const vacationRate = Number(settings.vacationRate) || 0;
+    const taxInfo = document.getElementById("taxInfo");
+    document.getElementById("hourlyRate").value = hourlyRate.toFixed(2);
+    document.getElementById("vacationRate").value = (vacationRate * 100).toFixed(2).replace(/\.00$/, "");
+    document.getElementById("carriedHours").value = Number(settings.carriedHours || 0).toFixed(2);
+    document.getElementById("hourlyRateDisplay").textContent = `${formatMoney(hourlyRate)}/h`;
+    document.getElementById("grossHourlyRateDisplay").textContent = `${formatMoney(totals.grossHourlyRate)}/h`;
+    document.getElementById("taxEnabled").checked = !!settings.taxEnabled;
+    document.getElementById("carriedHoursDisplay").textContent = `${formatNumber(totals.carriedHours)} h`;
+    document.getElementById("loggedHoursDisplay").textContent = `${formatNumber(totals.loggedHours)} h`;
+    document.getElementById("yearHours").textContent = `${formatNumber(totals.yearHours)} h`;
+    document.getElementById("grossYear").textContent = formatMoney(totals.gross);
+    document.getElementById("vacationYear").textContent = formatMoney(totals.vacationPay);
+    document.getElementById("taxYear").textContent = formatMoney(totals.taxAmount);
+    document.getElementById("netYear").textContent = formatMoney(totals.net);
+    document.getElementById("yearThreshold").textContent = formatMoney(TAX_THRESHOLD);
+    if (!settings.taxEnabled) {
+        taxInfo.textContent = "Skatt är avstängd. Markera rutan om du vill att skatt ska räknas med.";
+    } else if (totals.gross <= TAX_THRESHOLD) {
+        taxInfo.textContent = `Skatt börjar när årets brutto passerar ${formatMoney(TAX_THRESHOLD)}. Då dras ${Math.round(TAX_RATE * 100)} % på beloppet över gränsen.`;
+    } else {
+        taxInfo.textContent = `Skatt dras nu med ${Math.round(TAX_RATE * 100)} % på delen över ${formatMoney(TAX_THRESHOLD)}.`;
+    }
+}
 function renderTable() {
     const tbody = document.querySelector("#workTable tbody");
     tbody.innerHTML = "";
+    const hourlyRate = Number(settings.hourlyRate) || 0;
+    const vacationRate = Number(settings.vacationRate) || 0;
     posts.forEach((post, idx) => {
         // Formatera tider för bättre läsbarhet
         const formatTime = t => {
@@ -31,9 +134,11 @@ function renderTable() {
         // Visa alltid två decimaler, utan avrundning till en decimal
         let hoursStr = typeof post.hours === "number" ? post.hours.toFixed(2) : Number(post.hours).toFixed(2);
         hoursStr = hoursStr.replace(".", ",");
+        const earned = Number(post.hours || 0) * hourlyRate * (1 + vacationRate);
         tr.innerHTML = `
             <td>${post.date}${clockIn}${clockOut}</td>
             <td>${hoursStr}</td>
+            <td>${formatMoney(earned)}</td>
             <td>${post.desc}</td>
             <td>
                 <button class="action-btn edit" data-idx="${idx}">Redigera</button>
@@ -45,6 +150,7 @@ function renderTable() {
     // Summering med komma och två decimaler
     const total = posts.reduce((sum, p) => sum + Number(p.hours), 0);
     document.getElementById("totalHours").textContent = total.toFixed(2).replace(".", ",");
+    renderIncomeSummary();
 }
 function resetForm() {
     document.getElementById("workForm").reset();
@@ -230,11 +336,35 @@ document.getElementById("exportBtn").addEventListener("click", exportJSON);
 document.getElementById("importInput").addEventListener("change", importJSON);
 document.getElementById("clearBtn").addEventListener("click", clearAll);
 document.getElementById("sortDate").addEventListener("click", toggleSort);
+document.getElementById("hourlyRate").addEventListener("input", e => {
+    const value = Number(String(e.target.value).replace(",", "."));
+    settings.hourlyRate = Number.isFinite(value) && value >= 0 ? value : DEFAULT_HOURLY_RATE;
+    saveSettings();
+    renderTable();
+});
+document.getElementById("vacationRate").addEventListener("input", e => {
+    const value = Number(String(e.target.value).replace(",", "."));
+    settings.vacationRate = Number.isFinite(value) && value >= 0 ? value / 100 : DEFAULT_VACATION_RATE;
+    saveSettings();
+    renderTable();
+});
+document.getElementById("carriedHours").addEventListener("input", e => {
+    const value = Number(String(e.target.value).replace(",", "."));
+    settings.carriedHours = Number.isFinite(value) && value >= 0 ? value : 0;
+    saveSettings();
+    renderTable();
+});
+document.getElementById("taxEnabled").addEventListener("change", e => {
+    settings.taxEnabled = e.target.checked;
+    saveSettings();
+    renderTable();
+});
 
 // Timer-knappar ersätts med clock in/out
 document.getElementById("clockInBtn").addEventListener("click", clockIn);
 document.getElementById("clockOutBtn").addEventListener("click", clockOut);
 
+loadSettings();
 loadPosts();
 sortPosts();
 renderTable();
