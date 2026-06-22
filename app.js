@@ -56,6 +56,15 @@ function getYearPosts() {
         return !isNaN(parsedDate) && parsedDate.getFullYear() === year;
     });
 }
+function getCurrentMonthPosts() {
+    const now = new Date();
+    return posts.filter(post => {
+        const parsedDate = new Date(post.date);
+        return !isNaN(parsedDate)
+            && parsedDate.getFullYear() === now.getFullYear()
+            && parsedDate.getMonth() === now.getMonth();
+    });
+}
 function formatNumber(value) {
     return Number(value || 0).toLocaleString("sv-SE", {
         minimumFractionDigits: 2,
@@ -86,8 +95,17 @@ function getIncomeTotals() {
     const grossHourlyRate = baseHourlyRate * (1 + vacationRate);
     return { yearHours, loggedHours, carriedHours, gross, taxAmount, net, vacationPay, baseHourlyRate, vacationRate, grossHourlyRate };
 }
+function getMonthIncomeTotals() {
+    const monthPosts = getCurrentMonthPosts();
+    const monthHours = monthPosts.reduce((sum, post) => sum + Number(post.hours || 0), 0);
+    const baseHourlyRate = Number(settings.hourlyRate) || 0;
+    const vacationRate = Number(settings.vacationRate) || 0;
+    const gross = monthHours * baseHourlyRate * (1 + vacationRate);
+    return { monthHours, gross };
+}
 function renderIncomeSummary() {
     const totals = getIncomeTotals();
+    const monthTotals = getMonthIncomeTotals();
     const hourlyRate = Number(settings.hourlyRate) || 0;
     const vacationRate = Number(settings.vacationRate) || 0;
     const taxInfo = document.getElementById("taxInfo");
@@ -101,6 +119,7 @@ function renderIncomeSummary() {
     document.getElementById("loggedHoursDisplay").textContent = `${formatNumber(totals.loggedHours)} h`;
     document.getElementById("yearHours").textContent = `${formatNumber(totals.yearHours)} h`;
     document.getElementById("grossYear").textContent = formatMoney(totals.gross);
+    document.getElementById("monthGross").textContent = formatMoney(monthTotals.gross);
     document.getElementById("vacationYear").textContent = formatMoney(totals.vacationPay);
     document.getElementById("taxYear").textContent = formatMoney(totals.taxAmount);
     document.getElementById("netYear").textContent = formatMoney(totals.net);
@@ -119,7 +138,6 @@ function renderTable() {
     const hourlyRate = Number(settings.hourlyRate) || 0;
     const vacationRate = Number(settings.vacationRate) || 0;
     posts.forEach((post, idx) => {
-        // Formatera tider för bättre läsbarhet
         const formatTime = t => {
             if (!t) return "";
             const match = t.match(/^(\d{4}-\d{2}-\d{2})[ ,T]*(\d{2}:\d{2}:\d{2})/);
@@ -131,7 +149,6 @@ function renderTable() {
         const clockIn = post.clockIn ? `<br><small><b>Clock In:</b> ${formatTime(post.clockIn)}</small>` : "";
         const clockOut = post.clockOut ? `<br><small><b>Clock Out:</b> ${formatTime(post.clockOut)}</small>` : "";
         const tr = document.createElement("tr");
-        // Visa alltid två decimaler, utan avrundning till en decimal
         let hoursStr = typeof post.hours === "number" ? post.hours.toFixed(2) : Number(post.hours).toFixed(2);
         hoursStr = hoursStr.replace(".", ",");
         const earned = Number(post.hours || 0) * hourlyRate * (1 + vacationRate);
@@ -147,7 +164,6 @@ function renderTable() {
         `;
         tbody.appendChild(tr);
     });
-    // Summering med komma och två decimaler
     const total = posts.reduce((sum, p) => sum + Number(p.hours), 0);
     document.getElementById("totalHours").textContent = total.toFixed(2).replace(".", ",");
     renderIncomeSummary();
@@ -166,13 +182,10 @@ function resetForm() {
 function addOrEditPost(e) {
     e.preventDefault();
     const date = document.getElementById("date").value;
-    // Tillåt punkt eller komma som decimaltecken och konvertera till nummer
     let hoursStr = document.getElementById("hours").value.replace(",", ".");
     const hours = Number(hoursStr);
     const desc = document.getElementById("desc").value.trim();
-    // clockInTime och clockOutTime kan vara null
     if (!date || isNaN(hours) || !desc) return;
-    // Spara alltid två decimaler
     const postData = {
         date,
         hours: Number(hours.toFixed(2)),
@@ -214,12 +227,86 @@ function handleTableClick(e) {
         }
     }
 }
-function exportJSON() {
-    const blob = new Blob([JSON.stringify(posts, null, 2)], {type: "application/json"});
+function escapeExcelXml(value) {
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+}
+function toExcelRow(values) {
+    const cells = values.map(cell => {
+        const type = cell.type || "String";
+        const value = type === "Number" ? Number(cell.value || 0) : escapeExcelXml(cell.value);
+        return `<Cell><Data ss:Type="${type}">${value}</Data></Cell>`;
+    }).join("");
+    return `<Row>${cells}</Row>`;
+}
+function exportExcel() {
+    const totals = getIncomeTotals();
+    const monthTotals = getMonthIncomeTotals();
+    const hourlyRate = Number(settings.hourlyRate) || 0;
+    const vacationRatePercent = (Number(settings.vacationRate) || 0) * 100;
+    const postsRows = posts.map(post => {
+        const earned = Number(post.hours || 0) * hourlyRate * (1 + (Number(settings.vacationRate) || 0));
+        return toExcelRow([
+            { value: post.date },
+            { value: Number(post.hours || 0), type: "Number" },
+            { value: post.desc },
+            { value: post.clockIn || "" },
+            { value: post.clockOut || "" },
+            { value: earned, type: "Number" }
+        ]);
+    }).join("");
+    const summaryRows = [
+        toExcelRow([{ value: "Ar" }, { value: getCurrentYear(), type: "Number" }]),
+        toExcelRow([{ value: "Timlon" }, { value: hourlyRate, type: "Number" }]),
+        toExcelRow([{ value: "Semesterersattning (%)" }, { value: vacationRatePercent, type: "Number" }]),
+        toExcelRow([{ value: "Redan arbetade timmar" }, { value: totals.carriedHours, type: "Number" }]),
+        toExcelRow([{ value: "Inlagda timmar i ar" }, { value: totals.loggedHours, type: "Number" }]),
+        toExcelRow([{ value: "Totala timmar i ar" }, { value: totals.yearHours, type: "Number" }]),
+        toExcelRow([{ value: "Brutto i ar" }, { value: totals.gross, type: "Number" }]),
+        toExcelRow([{ value: "Skatt i ar" }, { value: totals.taxAmount, type: "Number" }]),
+        toExcelRow([{ value: "Netto i ar" }, { value: totals.net, type: "Number" }]),
+        toExcelRow([{ value: "Lon denna manad" }, { value: monthTotals.gross, type: "Number" }])
+    ].join("");
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+ <Styles>
+  <Style ss:ID="Header"><Font ss:Bold="1"/></Style>
+ </Styles>
+ <Worksheet ss:Name="Poster">
+  <Table>
+   <Row ss:StyleID="Header">
+    <Cell><Data ss:Type="String">Datum</Data></Cell>
+    <Cell><Data ss:Type="String">Timmar</Data></Cell>
+    <Cell><Data ss:Type="String">Beskrivning</Data></Cell>
+    <Cell><Data ss:Type="String">Clock In</Data></Cell>
+    <Cell><Data ss:Type="String">Clock Out</Data></Cell>
+    <Cell><Data ss:Type="String">Intjanat</Data></Cell>
+   </Row>
+   ${postsRows}
+  </Table>
+ </Worksheet>
+ <Worksheet ss:Name="Sammanfattning">
+  <Table>
+   <Row ss:StyleID="Header">
+    <Cell><Data ss:Type="String">Namn</Data></Cell>
+    <Cell><Data ss:Type="String">Varde</Data></Cell>
+   </Row>
+   ${summaryRows}
+  </Table>
+ </Worksheet>
+</Workbook>`;
+    const blob = new Blob(["\ufeff", xml], { type: "application/vnd.ms-excel;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "worktimekeeper.json";
+    a.download = "worktimekeeper.xls";
     a.click();
     URL.revokeObjectURL(url);
 }
@@ -230,8 +317,6 @@ function importJSON(e) {
     reader.onload = function(ev) {
         try {
             const imported = JSON.parse(ev.target.result);
-
-            // Tillåt import av objekt med "posts"-nyckel eller direkt array
             let arr = [];
             if (Array.isArray(imported)) {
                 arr = imported;
@@ -241,8 +326,6 @@ function importJSON(e) {
                 alert("Filen innehåller inte någon lista med poster.");
                 return;
             }
-
-            // Kontrollera att varje post har rätt struktur
             const valid = arr.every(p =>
                 typeof p === "object" &&
                 typeof p.date === "string" &&
@@ -253,8 +336,6 @@ function importJSON(e) {
                 alert("En eller flera poster saknar nödvändiga fält (date, hours, desc).");
                 return;
             }
-
-            // Konvertera hours till nummer om det är sträng
             posts = arr.map(p => ({
                 date: p.date,
                 hours: Number(p.hours),
@@ -295,7 +376,6 @@ function toggleSort() {
 }
 function getCurrentTimestamp() {
     const now = new Date();
-    // Format: YYYY-MM-DD HH:mm:ss
     const pad = n => String(n).padStart(2, "0");
     const date = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
     const time = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
@@ -307,7 +387,6 @@ function clockIn() {
     document.getElementById("clockInTime").textContent = `⏱️ ${clockInTime.split(" ")[1]}`;
     document.getElementById("clockInBtn").disabled = true;
     document.getElementById("clockOutBtn").disabled = false;
-    // Sätt dagens datum om det inte är valt
     if (!document.getElementById("date").value) {
         document.getElementById("date").value = clockInTime.split(" ")[0];
     }
@@ -317,7 +396,6 @@ function clockOut() {
     clockOutTime = getCurrentTimestamp();
     document.getElementById("clockOutTime").textContent = `⏱️ ${clockOutTime.split(" ")[1]}`;
     document.getElementById("clockOutBtn").disabled = true;
-    // Räkna ut timmar automatiskt om clockIn och clockOut är samma dag
     const dateVal = document.getElementById("date").value;
     if (dateVal && clockInTime && clockOutTime) {
         const inDate = new Date(`${dateVal}T${clockInTime.split(" ")[1]}`);
@@ -332,7 +410,7 @@ function clockOut() {
 document.getElementById("workForm").addEventListener("submit", addOrEditPost);
 document.getElementById("resetBtn").addEventListener("click", resetForm);
 document.getElementById("workTable").addEventListener("click", handleTableClick);
-document.getElementById("exportBtn").addEventListener("click", exportJSON);
+document.getElementById("exportBtn").addEventListener("click", exportExcel);
 document.getElementById("importInput").addEventListener("change", importJSON);
 document.getElementById("clearBtn").addEventListener("click", clearAll);
 document.getElementById("sortDate").addEventListener("click", toggleSort);
@@ -359,8 +437,6 @@ document.getElementById("taxEnabled").addEventListener("change", e => {
     saveSettings();
     renderTable();
 });
-
-// Timer-knappar ersätts med clock in/out
 document.getElementById("clockInBtn").addEventListener("click", clockIn);
 document.getElementById("clockOutBtn").addEventListener("click", clockOut);
 
